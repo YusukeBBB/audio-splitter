@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: audio-splitter
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
