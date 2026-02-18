@@ -118,6 +118,50 @@ async def crop_track(session_id: str, filename: str, crop_start: float = 0, crop
     return {"duration": duration, "waveform": peaks}
 
 
+@app.post("/api/split-track/{session_id}/{filename}")
+async def split_track_endpoint(session_id: str, filename: str, split_at: float = 0):
+    """トラックを指定位置で2つに分割する。"""
+    file_path = WORK_DIR / session_id / "output" / filename
+    if not file_path.exists():
+        return JSONResponse({"error": "not found"}, status_code=404)
+
+    audio, sr = sf.read(str(file_path), dtype='float32')
+    if audio.ndim > 1:
+        audio = audio.mean(axis=1)
+
+    split_sample = int(split_at * sr)
+    split_sample = max(1, min(split_sample, len(audio) - 1))
+
+    part1 = audio[:split_sample]
+    part2 = audio[split_sample:]
+
+    # 新ファイル名を生成（衝突回避）
+    stem = file_path.stem
+    suffix = "b"
+    new_filename = f"{stem}{suffix}.wav"
+    new_path = file_path.parent / new_filename
+    while new_path.exists():
+        suffix += "b"
+        new_filename = f"{stem}{suffix}.wav"
+        new_path = file_path.parent / new_filename
+
+    sf.write(str(file_path), part1, sr)
+    sf.write(str(new_path), part2, sr)
+
+    return {
+        "track1": {
+            "filename": filename,
+            "duration": len(part1) / sr,
+            "waveform": compute_waveform_peaks(part1),
+        },
+        "track2": {
+            "filename": new_filename,
+            "duration": len(part2) / sr,
+            "waveform": compute_waveform_peaks(part2),
+        },
+    }
+
+
 @app.delete("/api/track/{session_id}/{filename}")
 async def delete_track(session_id: str, filename: str):
     """トラックを削除。"""
@@ -266,17 +310,23 @@ HTML_PAGE = """\
   .btn-secondary:hover { background: #3a3a3a; }
   .bottom-actions { margin-top: 20px; display: flex; gap: 12px; flex-wrap: wrap; }
 
-  /* クロップ情報 */
-  .crop-info {
+  /* クロップ・カット情報 */
+  .crop-info, .cut-info {
     font-size: 0.8rem; color: #aaa; margin-top: 4px; display: none;
   }
-  .crop-info.active { display: flex; gap: 12px; align-items: center; }
-  .crop-info button {
+  .crop-info.active, .cut-info.active { display: flex; gap: 12px; align-items: center; }
+  .crop-info button, .cut-info button {
     background: #6c8cff; border: none; color: #fff;
     border-radius: 4px; padding: 3px 10px; font-size: 0.78rem;
     cursor: pointer;
   }
-  .crop-info button.cancel { background: #444; }
+  .crop-info button.cancel, .cut-info button.cancel { background: #444; }
+
+  /* カットライン */
+  .cut-line {
+    position: absolute; top: 0; width: 3px; height: 100%;
+    background: #ff9f43; cursor: ew-resize; z-index: 3; display: none;
+  }
 </style>
 </head>
 <body>
@@ -307,7 +357,8 @@ HTML_PAGE = """\
 <script>
 // --- State ---
 let sessionId = null;
-let tracks = []; // {index, filename, duration, waveform, audio, cropStart, cropEnd, deleted}
+let tracks = [];
+let nextIndex = 0;
 
 // --- DOM ---
 const dropzone = document.getElementById('dropzone');
@@ -374,9 +425,11 @@ function handleFile(file) {
 function showResult(data) {
   sessionId = data.session_id;
   tracks = data.tracks.map(t => ({
-    ...t, audio: null, playing: false, cropMode: false,
-    cropStart: 0, cropEnd: t.duration, deleted: false, ver: 1,
+    ...t, name: 'Track ' + t.index, audio: null, playing: false,
+    cropMode: false, cropStart: 0, cropEnd: t.duration,
+    deleted: false, ver: 1, cutMode: false, cutAt: 0,
   }));
+  nextIndex = Math.max(...tracks.map(t => t.index)) + 1;
   renderTracks();
   resultEl.style.display = 'block';
   // DOM配置後に波形を描画
@@ -396,12 +449,13 @@ function renderTracks() {
     card.id = 'card-' + t.index;
     card.innerHTML = `
       <div class="track-header">
-        <input class="track-name" id="name-${t.index}" value="Track ${t.index}" spellcheck="false">
+        <input class="track-name" id="name-${t.index}" value="${t.name}" spellcheck="false">
         <span class="info" id="info-${t.index}">${fmt(t.duration)} (${fmt(t.start)} - ${fmt(t.end)})</span>
       </div>
       <div class="waveform-container" id="wc-${t.index}">
         <canvas id="cv-${t.index}"></canvas>
         <div class="playback-bar" id="pb-${t.index}"></div>
+        <div class="cut-line" id="cl-${t.index}"></div>
         <div class="crop-overlay" id="co-${t.index}">
           <div class="crop-shade" id="shade-l-${t.index}" style="left:0;"></div>
           <div class="crop-handle" id="handle-l-${t.index}"></div>
@@ -414,9 +468,15 @@ function renderTracks() {
         <button onclick="applyCrop(${t.index})">適用</button>
         <button class="cancel" onclick="cancelCrop(${t.index})">キャンセル</button>
       </div>
+      <div class="cut-info" id="cuti-${t.index}">
+        <span id="cut-pos-${t.index}"></span>
+        <button onclick="applyCut(${t.index})">適用</button>
+        <button class="cancel" onclick="cancelCut(${t.index})">キャンセル</button>
+      </div>
       <div class="track-actions">
         <button id="playbtn-${t.index}" onclick="togglePlay(${t.index})">&#9654; 再生</button>
         <button onclick="startCrop(${t.index})">&#9986; クロップ</button>
+        <button onclick="startCut(${t.index})">カット</button>
         <button class="danger" onclick="deleteTrack(${t.index})">&#10005; 削除</button>
       </div>
     `;
@@ -456,7 +516,20 @@ document.addEventListener('click', e => {
   if (!wc) return;
   const idx = parseInt(wc.id.replace('wc-', ''));
   const t = tracks.find(x => x.index === idx);
-  if (!t || t.cropMode) return;
+  if (!t) return;
+
+  // カットモード: クリックでカット位置を移動
+  if (t.cutMode) {
+    if (e.target.classList.contains('cut-line')) return;
+    const r = wc.getBoundingClientRect();
+    const pct = (e.clientX - r.left) / r.width;
+    t.cutAt = pct * t.duration;
+    document.getElementById('cl-' + idx).style.left = (pct * r.width) + 'px';
+    updateCutInfo(idx);
+    return;
+  }
+
+  if (t.cropMode) return;
 
   const rect = wc.getBoundingClientRect();
   const pct = (e.clientX - rect.left) / rect.width;
@@ -650,6 +723,117 @@ function cancelCrop(idx) {
   if (t) { t.cropMode = false; t.cropStart = 0; t.cropEnd = t.duration; }
   document.getElementById('co-' + idx).classList.remove('active');
   document.getElementById('ci-' + idx).classList.remove('active');
+}
+
+// --- Cut ---
+function saveNames() {
+  for (const t of tracks) {
+    if (t.deleted) continue;
+    const inp = document.getElementById('name-' + t.index);
+    if (inp) t.name = inp.value;
+  }
+}
+
+function startCut(idx) {
+  const t = tracks.find(x => x.index === idx);
+  if (!t) return;
+  t.cutMode = true;
+  t.cutAt = t.duration / 2;
+
+  const cl = document.getElementById('cl-' + idx);
+  const wc = document.getElementById('wc-' + idx);
+  cl.style.display = 'block';
+  cl.style.left = (wc.clientWidth / 2) + 'px';
+
+  document.getElementById('cuti-' + idx).classList.add('active');
+  updateCutInfo(idx);
+  setupCutDrag(idx);
+}
+
+function setupCutDrag(idx) {
+  const t = tracks.find(x => x.index === idx);
+  const wc = document.getElementById('wc-' + idx);
+  const cl = document.getElementById('cl-' + idx);
+
+  cl.onmousedown = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const wcRect = wc.getBoundingClientRect();
+    const wcW = wcRect.width;
+
+    function onMove(e2) {
+      let x = e2.clientX - wcRect.left;
+      x = Math.max(0, Math.min(x, wcW));
+      t.cutAt = (x / wcW) * t.duration;
+      cl.style.left = x + 'px';
+      updateCutInfo(idx);
+    }
+    function onUp() {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  };
+}
+
+function updateCutInfo(idx) {
+  const t = tracks.find(x => x.index === idx);
+  const el = document.getElementById('cut-pos-' + idx);
+  el.textContent = 'カット位置: ' + fmt(t.cutAt);
+}
+
+async function applyCut(idx) {
+  const t = tracks.find(x => x.index === idx);
+  if (!t) return;
+  saveNames();
+
+  const url = '/api/split-track/' + sessionId + '/' + t.filename +
+    '?split_at=' + t.cutAt;
+  const res = await fetch(url, { method: 'POST' });
+  const data = await res.json();
+
+  // 元のトラックを更新
+  const origEnd = t.end;
+  t.duration = data.track1.duration;
+  t.waveform = data.track1.waveform;
+  t.end = t.start + data.track1.duration;
+  t.ver++;
+  t.cutMode = false;
+  t.cropStart = 0;
+  t.cropEnd = t.duration;
+
+  // 新しいトラックを作成
+  const newTrack = {
+    index: nextIndex++,
+    filename: data.track2.filename,
+    start: t.end,
+    end: origEnd,
+    duration: data.track2.duration,
+    waveform: data.track2.waveform,
+    name: t.name + 'b',
+    audio: null, playing: false,
+    cropMode: false, cropStart: 0, cropEnd: data.track2.duration,
+    deleted: false, ver: 1, cutMode: false, cutAt: 0,
+  };
+
+  // 元のトラックの直後に挿入
+  const pos = tracks.indexOf(t);
+  tracks.splice(pos + 1, 0, newTrack);
+
+  renderTracks();
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      for (const tr of tracks) { if (!tr.deleted) drawWaveform(tr); }
+    });
+  });
+}
+
+function cancelCut(idx) {
+  const t = tracks.find(x => x.index === idx);
+  if (t) { t.cutMode = false; t.cutAt = 0; }
+  document.getElementById('cl-' + idx).style.display = 'none';
+  document.getElementById('cuti-' + idx).classList.remove('active');
 }
 
 // --- Delete ---
