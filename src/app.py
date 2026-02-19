@@ -279,6 +279,7 @@ async def auth_callback(code: str, state: str):
     import urllib.request
     import ssl
     user_name = ""
+    user_email = ""
     try:
         ctx = ssl.create_default_context()
         try:
