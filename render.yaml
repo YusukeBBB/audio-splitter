@@ -4,3 +4,12 @@ services:
     runtime: docker
     dockerfilePath: ./Dockerfile
     plan: free
+    envVars:
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_API_KEY
+        sync: false
+      - key: BASE_URL
+        sync: false
