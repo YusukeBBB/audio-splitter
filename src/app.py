@@ -32,6 +32,27 @@ if _env_path.exists():
 
 app = FastAPI()
 
+
+@app.get("/robots.txt")
+async def robots_txt():
+    return JSONResponse(
+        content="User-agent: *\nDisallow: /\n",
+        media_type="text/plain",
+    )
+
+
+from starlette.middleware.base import BaseHTTPMiddleware
+
+
+class NoIndexMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        response.headers["X-Robots-Tag"] = "noindex, nofollow"
+        return response
+
+
+app.add_middleware(NoIndexMiddleware)
+
 WORK_DIR = Path(tempfile.gettempdir()) / "audio-splitter"
 WORK_DIR.mkdir(exist_ok=True)
 
@@ -477,6 +498,7 @@ HTML_PAGE = """\
 <html lang="ja">
 <head>
 <meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Audio Splitter</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
