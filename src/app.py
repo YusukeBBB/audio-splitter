@@ -203,36 +203,36 @@ HTML_PAGE = """\
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  /* MD3 Design Tokens (Dark Theme) */
+  /* MD3 Design Tokens (Light Theme) */
   :root {
-    --md-sys-color-primary: #D0BCFF;
-    --md-sys-color-on-primary: #381E72;
-    --md-sys-color-primary-container: #4F378B;
-    --md-sys-color-on-primary-container: #EADDFF;
-    --md-sys-color-secondary: #CCC2DC;
-    --md-sys-color-on-secondary: #332D41;
-    --md-sys-color-secondary-container: #4A4458;
-    --md-sys-color-on-secondary-container: #E8DEF8;
-    --md-sys-color-tertiary: #EFB8C8;
-    --md-sys-color-on-tertiary: #492532;
-    --md-sys-color-tertiary-container: #633B48;
-    --md-sys-color-on-tertiary-container: #FFD8E4;
-    --md-sys-color-error: #F2B8B5;
-    --md-sys-color-on-error: #601410;
-    --md-sys-color-error-container: #8C1D18;
-    --md-sys-color-on-error-container: #F9DEDC;
-    --md-sys-color-surface: #1C1B1F;
-    --md-sys-color-on-surface: #E6E1E5;
-    --md-sys-color-on-surface-variant: #CAC4D0;
-    --md-sys-color-surface-container-lowest: #0F0D13;
-    --md-sys-color-surface-container-low: #1D1B20;
-    --md-sys-color-surface-container: #211F26;
-    --md-sys-color-surface-container-high: #2B2930;
-    --md-sys-color-surface-container-highest: #36343B;
-    --md-sys-color-outline: #938F99;
-    --md-sys-color-outline-variant: #49454F;
-    --md-sys-color-inverse-surface: #E6E1E5;
-    --md-sys-color-inverse-on-surface: #313033;
+    --md-sys-color-primary: #6750A4;
+    --md-sys-color-on-primary: #FFFFFF;
+    --md-sys-color-primary-container: #EADDFF;
+    --md-sys-color-on-primary-container: #21005D;
+    --md-sys-color-secondary: #625B71;
+    --md-sys-color-on-secondary: #FFFFFF;
+    --md-sys-color-secondary-container: #E8DEF8;
+    --md-sys-color-on-secondary-container: #1D192B;
+    --md-sys-color-tertiary: #7D5260;
+    --md-sys-color-on-tertiary: #FFFFFF;
+    --md-sys-color-tertiary-container: #FFD8E4;
+    --md-sys-color-on-tertiary-container: #31111D;
+    --md-sys-color-error: #B3261E;
+    --md-sys-color-on-error: #FFFFFF;
+    --md-sys-color-error-container: #F9DEDC;
+    --md-sys-color-on-error-container: #410E0B;
+    --md-sys-color-surface: #FFFBFE;
+    --md-sys-color-on-surface: #1C1B1F;
+    --md-sys-color-on-surface-variant: #49454F;
+    --md-sys-color-surface-container-lowest: #FFFFFF;
+    --md-sys-color-surface-container-low: #F7F2FA;
+    --md-sys-color-surface-container: #F3EDF7;
+    --md-sys-color-surface-container-high: #ECE6F0;
+    --md-sys-color-surface-container-highest: #E6E0E9;
+    --md-sys-color-outline: #79747E;
+    --md-sys-color-outline-variant: #CAC4D0;
+    --md-sys-color-inverse-surface: #313033;
+    --md-sys-color-inverse-on-surface: #F4EFF4;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -384,7 +384,7 @@ HTML_PAGE = """\
   .crop-overlay.active { display: block; }
   .crop-shade {
     position: absolute; top: 0; height: 100%;
-    background: rgba(15,13,19,0.65);
+    background: rgba(255,251,254,0.65);
   }
   .crop-handle {
     position: absolute; top: 0; width: 4px; height: 100%;
@@ -434,14 +434,14 @@ HTML_PAGE = """\
     box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 1px 3px 1px rgba(0,0,0,.15);
   }
   .btn-primary:disabled {
-    background: rgba(230,225,229,0.12);
-    color: rgba(230,225,229,0.38);
+    background: rgba(28,27,31,0.12);
+    color: rgba(28,27,31,0.38);
     box-shadow: none; cursor: not-allowed;
   }
   .btn-primary:disabled::before { display: none; }
   .spinner {
     display: inline-block; width: 14px; height: 14px;
-    border: 2px solid rgba(56,30,114,0.4);
+    border: 2px solid rgba(255,255,255,0.4);
     border-top-color: var(--md-sys-color-on-primary);
     border-radius: 50%; animation: spin 0.6s linear infinite;
     vertical-align: middle; margin-right: 6px;
@@ -661,7 +661,7 @@ function drawWaveform(t) {
 
   for (let i = 0; i < bars.length; i++) {
     const val = bars[i] * half * 0.9;
-    ctx.fillStyle = '#D0BCFF';
+    ctx.fillStyle = '#6750A4';
     ctx.fillRect(i * barW, half - val, Math.max(barW - 1, 1), val * 2);
   }
 }
