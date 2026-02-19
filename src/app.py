@@ -44,8 +44,12 @@ GOOGLE_SCOPES = [
     "https://www.googleapis.com/auth/drive",
     "openid",
     "https://www.googleapis.com/auth/userinfo.profile",
+    "https://www.googleapis.com/auth/userinfo.email",
 ]
 DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "")
+ALLOWED_EMAILS = [
+    e.strip() for e in os.environ.get("ALLOWED_EMAILS", "").split(",") if e.strip()
+]
 
 # In-memory token storage: {session_id: {"access_token": ..., "user_name": ..., ...}}
 oauth_tokens: dict[str, dict] = {}
@@ -293,8 +297,18 @@ async def auth_callback(code: str, state: str):
         with urllib.request.urlopen(req, context=ctx) as resp:
             user_info = json.loads(resp.read())
             user_name = user_info.get("name", user_info.get("email", ""))
+            user_email = user_info.get("email", "")
     except Exception:
         pass
+
+    # メールアドレスによるアクセス制限
+    if ALLOWED_EMAILS and user_email not in ALLOWED_EMAILS:
+        return HTMLResponse(
+            "<html><body><script>"
+            "window.opener.postMessage({type:'google-auth-error',message:'このアカウントは許可されていません'},'*');"
+            "window.close();"
+            "</script></body></html>"
+        )
 
     oauth_tokens[state] = {
         "access_token": creds.token,
@@ -1459,6 +1473,10 @@ async function ensureGoogleAuth() {
           .then(r => r.json())
           .then(data => { googleAccessToken = data.access_token; resolve(true); })
           .catch(() => resolve(false));
+      } else if (event.data && event.data.type === 'google-auth-error') {
+        window.removeEventListener('message', onMessage);
+        alert(event.data.message || '認証エラー');
+        resolve(false);
       }
     }
     window.addEventListener('message', onMessage);
