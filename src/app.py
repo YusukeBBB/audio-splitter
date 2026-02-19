@@ -42,9 +42,12 @@ GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY", "")
 GOOGLE_SCOPES = [
     "https://www.googleapis.com/auth/drive.file",
     "https://www.googleapis.com/auth/drive",
+    "openid",
+    "https://www.googleapis.com/auth/userinfo.profile",
 ]
+DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "")
 
-# In-memory token storage: {session_id: {"access_token": ..., ...}}
+# In-memory token storage: {session_id: {"access_token": ..., "user_name": ..., ...}}
 oauth_tokens: dict[str, dict] = {}
 
 
@@ -268,12 +271,38 @@ async def auth_callback(code: str, state: str):
     flow.fetch_token(code=code)
     creds = flow.credentials
 
+    # ユーザー名を取得
+    import urllib.request
+    import ssl
+    user_name = ""
+    try:
+        ctx = ssl.create_default_context()
+        try:
+            import certifi
+            ctx.load_verify_locations(certifi.where())
+        except ImportError:
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
+        req = urllib.request.Request(
+            "https://www.googleapis.com/oauth2/v1/userinfo?alt=json",
+            headers={
+                "Authorization": f"Bearer {creds.token}",
+                "User-Agent": "AudioSplitter/1.0",
+            },
+        )
+        with urllib.request.urlopen(req, context=ctx) as resp:
+            user_info = json.loads(resp.read())
+            user_name = user_info.get("name", user_info.get("email", ""))
+    except Exception:
+        pass
+
     oauth_tokens[state] = {
         "access_token": creds.token,
         "refresh_token": creds.refresh_token,
         "token_uri": creds.token_uri,
         "client_id": creds.client_id,
         "client_secret": creds.client_secret,
+        "user_name": user_name,
     }
 
     return HTMLResponse(
@@ -300,6 +329,7 @@ async def upload_to_drive(session_id: str, request: Request):
     parent_folder_id = body["parent_folder_id"]
     subfolder_name = body["subfolder_name"]
     names = body.get("names", {})
+    notify_discord = body.get("notify_discord", False)
 
     token_data = oauth_tokens.get(session_id)
     if not token_data:
@@ -336,6 +366,7 @@ async def upload_to_drive(session_id: str, request: Request):
             subfolder_id = folder["id"]
 
             total = len(wav_files)
+            uploaded_files = []
             yield f"data: {json.dumps({'type': 'start', 'total': total})}\n\n"
 
             for i, wav_path in enumerate(wav_files):
@@ -356,20 +387,74 @@ async def upload_to_drive(session_id: str, request: Request):
                     check=True,
                 )
 
-                # Google Drive にアップロード
+                # Google Drive にアップロード（webViewLink も取得）
                 file_meta = {"name": mp3_name, "parents": [subfolder_id]}
                 media = MediaFileUpload(str(mp3_path), mimetype="audio/mpeg", resumable=True)
-                service.files().create(body=file_meta, media_body=media, fields="id").execute()
+                result = service.files().create(
+                    body=file_meta, media_body=media, fields="id,webViewLink"
+                ).execute()
+
+                # リンクを公開用に共有設定
+                try:
+                    service.permissions().create(
+                        fileId=result["id"],
+                        body={"type": "anyone", "role": "reader"},
+                    ).execute()
+                except Exception:
+                    pass  # 共有設定失敗してもアップロード自体は成功
+
+                uploaded_files.append({
+                    "name": mp3_name,
+                    "link": result.get("webViewLink", ""),
+                })
 
                 mp3_path.unlink(missing_ok=True)
 
                 yield f"data: {json.dumps({'type': 'progress', 'current': i + 1, 'total': total, 'name': mp3_name})}\n\n"
+
+            # Discord通知
+            if notify_discord and DISCORD_WEBHOOK_URL and uploaded_files:
+                _send_discord_notification(
+                    token_data.get("user_name", "不明"),
+                    uploaded_files,
+                )
 
             yield f"data: {json.dumps({'type': 'done'})}\n\n"
         except Exception as e:
             yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+
+def _send_discord_notification(user_name: str, files: list[dict]) -> None:
+    """Discord Webhookで通知を送信。"""
+    import urllib.request
+    import ssl
+
+    track_lines = "\n".join(f"- [{f['name']}]({f['link']})" for f in files)
+    content = f"**{user_name}** さんが音源をアップロードしました\n\n{track_lines}"
+
+    payload = json.dumps({"content": content}).encode("utf-8")
+    req = urllib.request.Request(
+        DISCORD_WEBHOOK_URL,
+        data=payload,
+        headers={
+            "Content-Type": "application/json",
+            "User-Agent": "AudioSplitter/1.0",
+        },
+        method="POST",
+    )
+    try:
+        ctx = ssl.create_default_context()
+        try:
+            import certifi
+            ctx.load_verify_locations(certifi.where())
+        except ImportError:
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
+        urllib.request.urlopen(req, context=ctx)
+    except Exception:
+        pass
 
 
 HTML_PAGE = """\
@@ -764,6 +849,9 @@ HTML_PAGE = """\
       <div class="upload-status" id="uploadStatus"></div>
     </div>
     <div class="modal-actions" id="modalActions">
+      <label class="checkbox-label" style="margin-right:auto;display:flex;align-items:center;gap:6px;font-size:14px;color:var(--md-sys-color-on-surface-variant);cursor:pointer;">
+        <input type="checkbox" id="skipDiscord"> Discordには通知しない
+      </label>
       <button class="btn btn-secondary" onclick="closeDriveModal()">キャンセル</button>
       <button class="btn btn-primary" id="proceedBtn" onclick="proceedDrive()">このまま進む</button>
     </div>
@@ -1323,7 +1411,10 @@ function openDriveModal() {
   document.getElementById('uploadProgress').style.display = 'none';
   document.getElementById('uploadBar').style.width = '0%';
   document.getElementById('uploadStatus').textContent = '';
+  document.getElementById('skipDiscord').checked = false;
   document.getElementById('modalActions').innerHTML =
+    '<label class="checkbox-label" style="margin-right:auto;display:flex;align-items:center;gap:6px;font-size:14px;color:var(--md-sys-color-on-surface-variant);cursor:pointer;">' +
+    '<input type="checkbox" id="skipDiscord"> Discordには通知しない</label>' +
     '<button class="btn btn-secondary" onclick="closeDriveModal()">キャンセル</button>' +
     '<button class="btn btn-primary" id="proceedBtn" onclick="proceedDrive()">このまま進む</button>';
   document.getElementById('driveModal').classList.add('active');
@@ -1455,47 +1546,58 @@ async function proceedDrive() {
   const uploadStatus = document.getElementById('uploadStatus');
   uploadStatus.textContent = 'アップロード準備中...';
 
-  const response = await fetch('/api/upload-drive/' + sessionId, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      parent_folder_id: folder.id,
-      subfolder_name: subfolderName,
-      names: names,
-    }),
-  });
+  try {
+    const response = await fetch('/api/upload-drive/' + sessionId, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        parent_folder_id: folder.id,
+        subfolder_name: subfolderName,
+        names: names,
+        notify_discord: !document.getElementById('skipDiscord').checked,
+      }),
+    });
 
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || 'Upload failed');
+    }
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\\n');
-    buffer = lines.pop();
-    for (const line of lines) {
-      if (line.startsWith('data: ')) {
-        const data = JSON.parse(line.slice(6));
-        if (data.type === 'progress') {
-          const pct = (data.current / data.total * 100);
-          uploadBar.style.width = pct + '%';
-          uploadStatus.textContent = data.current + '/' + data.total + '曲アップロード中... (' + data.name + ')';
-        } else if (data.type === 'done') {
-          uploadBar.style.width = '100%';
-          uploadStatus.textContent = 'アップロード完了!';
-          document.getElementById('modalActions').innerHTML =
-            '<button class="btn btn-primary" onclick="closeDriveModal()">閉じる</button>';
-          document.getElementById('modalActions').style.display = 'flex';
-        } else if (data.type === 'error') {
-          uploadStatus.textContent = 'エラー: ' + data.message;
-          document.getElementById('modalActions').innerHTML =
-            '<button class="btn btn-secondary" onclick="closeDriveModal()">閉じる</button>';
-          document.getElementById('modalActions').style.display = 'flex';
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const parts = buffer.split('\\n\\n');
+      buffer = parts.pop();
+      for (const part of parts) {
+        const line = part.trim();
+        if (line.startsWith('data: ')) {
+          const data = JSON.parse(line.slice(6));
+          if (data.type === 'progress') {
+            const pct = (data.current / data.total * 100);
+            uploadBar.style.width = pct + '%';
+            uploadStatus.textContent = data.current + '/' + data.total + '曲アップロード中... (' + data.name + ')';
+          } else if (data.type === 'done') {
+            uploadBar.style.width = '100%';
+            uploadStatus.textContent = 'アップロード完了!';
+            document.getElementById('modalActions').innerHTML =
+              '<button class="btn btn-primary" onclick="closeDriveModal()">閉じる</button>';
+            document.getElementById('modalActions').style.display = 'flex';
+          } else if (data.type === 'error') {
+            throw new Error(data.message);
+          }
         }
       }
     }
+  } catch (e) {
+    uploadStatus.textContent = 'エラー: ' + e.message;
+    document.getElementById('modalActions').innerHTML =
+      '<button class="btn btn-secondary" onclick="closeDriveModal()">閉じる</button>';
+    document.getElementById('modalActions').style.display = 'flex';
   }
 }
 </script>

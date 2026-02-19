@@ -13,3 +13,5 @@ services:
         sync: false
       - key: BASE_URL
         sync: false
+      - key: DISCORD_WEBHOOK_URL
+        sync: false
