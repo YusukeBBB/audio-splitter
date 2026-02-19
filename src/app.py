@@ -203,36 +203,36 @@ HTML_PAGE = """\
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  /* MD3 Design Tokens (Light Theme) */
+  /* MD3 Design Tokens (Light Theme - Blue) */
   :root {
-    --md-sys-color-primary: #6750A4;
+    --md-sys-color-primary: #1565C0;
     --md-sys-color-on-primary: #FFFFFF;
-    --md-sys-color-primary-container: #EADDFF;
-    --md-sys-color-on-primary-container: #21005D;
-    --md-sys-color-secondary: #625B71;
+    --md-sys-color-primary-container: #D4E3FF;
+    --md-sys-color-on-primary-container: #001C3A;
+    --md-sys-color-secondary: #555F71;
     --md-sys-color-on-secondary: #FFFFFF;
-    --md-sys-color-secondary-container: #E8DEF8;
-    --md-sys-color-on-secondary-container: #1D192B;
-    --md-sys-color-tertiary: #7D5260;
+    --md-sys-color-secondary-container: #D9E3F8;
+    --md-sys-color-on-secondary-container: #121C2B;
+    --md-sys-color-tertiary: #6E5676;
     --md-sys-color-on-tertiary: #FFFFFF;
-    --md-sys-color-tertiary-container: #FFD8E4;
-    --md-sys-color-on-tertiary-container: #31111D;
-    --md-sys-color-error: #B3261E;
+    --md-sys-color-tertiary-container: #F8D8FF;
+    --md-sys-color-on-tertiary-container: #271430;
+    --md-sys-color-error: #BA1A1A;
     --md-sys-color-on-error: #FFFFFF;
-    --md-sys-color-error-container: #F9DEDC;
-    --md-sys-color-on-error-container: #410E0B;
-    --md-sys-color-surface: #FFFBFE;
-    --md-sys-color-on-surface: #1C1B1F;
-    --md-sys-color-on-surface-variant: #49454F;
+    --md-sys-color-error-container: #FFDAD6;
+    --md-sys-color-on-error-container: #410002;
+    --md-sys-color-surface: #FAFCFF;
+    --md-sys-color-on-surface: #1A1C1E;
+    --md-sys-color-on-surface-variant: #43474E;
     --md-sys-color-surface-container-lowest: #FFFFFF;
-    --md-sys-color-surface-container-low: #F7F2FA;
-    --md-sys-color-surface-container: #F3EDF7;
-    --md-sys-color-surface-container-high: #ECE6F0;
-    --md-sys-color-surface-container-highest: #E6E0E9;
-    --md-sys-color-outline: #79747E;
-    --md-sys-color-outline-variant: #CAC4D0;
-    --md-sys-color-inverse-surface: #313033;
-    --md-sys-color-inverse-on-surface: #F4EFF4;
+    --md-sys-color-surface-container-low: #F4F6F9;
+    --md-sys-color-surface-container: #EEF0F4;
+    --md-sys-color-surface-container-high: #E8EAEE;
+    --md-sys-color-surface-container-highest: #E2E4E8;
+    --md-sys-color-outline: #73777F;
+    --md-sys-color-outline-variant: #C3C6CF;
+    --md-sys-color-inverse-surface: #2F3033;
+    --md-sys-color-inverse-on-surface: #F1F0F4;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -661,7 +661,7 @@ function drawWaveform(t) {
 
   for (let i = 0; i < bars.length; i++) {
     const val = bars[i] * half * 0.9;
-    ctx.fillStyle = '#6750A4';
+    ctx.fillStyle = '#1565C0';
     ctx.fillRect(i * barW, half - val, Math.max(barW - 1, 1), val * 2);
   }
 }
