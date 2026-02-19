@@ -200,47 +200,116 @@ HTML_PAGE = """\
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Audio Splitter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
 <style>
+  /* MD3 Design Tokens (Dark Theme) */
+  :root {
+    --md-sys-color-primary: #D0BCFF;
+    --md-sys-color-on-primary: #381E72;
+    --md-sys-color-primary-container: #4F378B;
+    --md-sys-color-on-primary-container: #EADDFF;
+    --md-sys-color-secondary: #CCC2DC;
+    --md-sys-color-on-secondary: #332D41;
+    --md-sys-color-secondary-container: #4A4458;
+    --md-sys-color-on-secondary-container: #E8DEF8;
+    --md-sys-color-tertiary: #EFB8C8;
+    --md-sys-color-on-tertiary: #492532;
+    --md-sys-color-tertiary-container: #633B48;
+    --md-sys-color-on-tertiary-container: #FFD8E4;
+    --md-sys-color-error: #F2B8B5;
+    --md-sys-color-on-error: #601410;
+    --md-sys-color-error-container: #8C1D18;
+    --md-sys-color-on-error-container: #F9DEDC;
+    --md-sys-color-surface: #1C1B1F;
+    --md-sys-color-on-surface: #E6E1E5;
+    --md-sys-color-on-surface-variant: #CAC4D0;
+    --md-sys-color-surface-container-lowest: #0F0D13;
+    --md-sys-color-surface-container-low: #1D1B20;
+    --md-sys-color-surface-container: #211F26;
+    --md-sys-color-surface-container-high: #2B2930;
+    --md-sys-color-surface-container-highest: #36343B;
+    --md-sys-color-outline: #938F99;
+    --md-sys-color-outline-variant: #49454F;
+    --md-sys-color-inverse-surface: #E6E1E5;
+    --md-sys-color-inverse-on-surface: #313033;
+  }
+
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    background: #0f0f0f;
-    color: #e0e0e0;
+    font-family: "Roboto", "Noto Sans JP", sans-serif;
+    background: var(--md-sys-color-surface);
+    color: var(--md-sys-color-on-surface);
     min-height: 100vh;
     display: flex;
     justify-content: center;
     padding: 40px 20px;
   }
   .container { max-width: 800px; width: 100%; }
-  h1 { font-size: 1.5rem; margin-bottom: 24px; color: #fff; }
+  h1 {
+    font-size: 24px; line-height: 32px; font-weight: 400;
+    margin-bottom: 24px; color: var(--md-sys-color-on-surface);
+  }
 
   /* ドロップゾーン */
   .dropzone {
-    border: 2px dashed #444; border-radius: 12px;
-    padding: 48px 24px; text-align: center; cursor: pointer;
-    transition: border-color 0.2s, background 0.2s;
+    border: 2px dashed var(--md-sys-color-outline);
+    border-radius: 16px; padding: 48px 24px; text-align: center;
+    cursor: pointer;
+    background: var(--md-sys-color-surface-container-low);
+    transition: border-color 0.2s cubic-bezier(0.2,0,0,1), background 0.2s cubic-bezier(0.2,0,0,1);
   }
   .dropzone:hover, .dropzone.dragover {
-    border-color: #6c8cff; background: rgba(108, 140, 255, 0.05);
+    border-color: var(--md-sys-color-primary);
+    background: var(--md-sys-color-surface-container);
   }
-  .dropzone p { color: #888; margin-bottom: 12px; }
-  .dropzone .browse { color: #6c8cff; text-decoration: underline; cursor: pointer; }
-  .dropzone .filename { margin-top: 12px; color: #aaa; font-size: 0.9rem; }
+  .dropzone p {
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: 14px; line-height: 20px; margin-bottom: 12px;
+  }
+  .dropzone .browse {
+    color: var(--md-sys-color-primary);
+    text-decoration: underline; cursor: pointer;
+    font-weight: 500; font-size: 14px;
+  }
+  .dropzone .filename {
+    margin-top: 12px; color: var(--md-sys-color-on-surface-variant);
+    font-size: 12px; line-height: 16px;
+  }
 
   /* プログレス */
   .progress { margin-top: 24px; display: none; }
-  .progress .bar-bg { background: #222; border-radius: 8px; overflow: hidden; height: 6px; }
-  .progress .bar { height: 100%; background: #6c8cff; width: 0%; transition: width 0.3s; }
-  .progress .status { margin-top: 8px; font-size: 0.85rem; color: #888; }
+  .progress .bar-bg {
+    background: var(--md-sys-color-surface-container-highest);
+    border-radius: 9999px; overflow: hidden; height: 4px;
+  }
+  .progress .bar {
+    height: 100%; background: var(--md-sys-color-primary);
+    width: 0%; transition: width 0.3s cubic-bezier(0.2,0,0,1);
+    border-radius: 9999px;
+  }
+  .progress .status {
+    margin-top: 8px; font-size: 12px; line-height: 16px;
+    color: var(--md-sys-color-on-surface-variant);
+  }
 
   /* 結果エリア */
   .result { margin-top: 24px; display: none; }
-  .result h2 { font-size: 1.1rem; color: #fff; margin-bottom: 12px; }
+  .result h2 {
+    font-size: 22px; line-height: 28px; font-weight: 400;
+    color: var(--md-sys-color-on-surface); margin-bottom: 16px;
+  }
 
-  /* トラックカード */
+  /* トラックカード (Elevated Card) */
   .track-card {
-    background: #1a1a1a; border-radius: 10px; padding: 16px;
+    background: var(--md-sys-color-surface-container);
+    border-radius: 12px; padding: 16px;
     margin-bottom: 12px; position: relative;
+    box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 1px 3px 1px rgba(0,0,0,.15);
+    transition: box-shadow 0.2s cubic-bezier(0.2,0,0,1);
+  }
+  .track-card:hover {
+    box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 2px 6px 2px rgba(0,0,0,.15);
   }
   .track-card.deleted { display: none; }
   .track-header {
@@ -248,84 +317,175 @@ HTML_PAGE = """\
     margin-bottom: 10px;
   }
   .track-name {
-    background: transparent; border: 1px solid #333; border-radius: 4px;
-    color: #6c8cff; font-weight: 600; font-size: 0.95rem;
-    padding: 2px 6px; outline: none; max-width: 50%;
+    background: transparent;
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: 4px;
+    color: var(--md-sys-color-primary);
+    font-weight: 500; font-size: 16px; line-height: 24px;
+    padding: 2px 8px; outline: none; max-width: 50%;
     font-family: inherit;
+    transition: border-color 0.2s, background 0.2s;
   }
-  .track-name:hover { border-color: #444; }
-  .track-name:focus { border-color: #6c8cff; background: #222; }
-  .track-header .info { color: #888; font-size: 0.85rem; }
+  .track-name:hover { border-color: var(--md-sys-color-outline); }
+  .track-name:focus {
+    border-color: var(--md-sys-color-primary);
+    border-width: 2px; padding: 1px 7px;
+    background: var(--md-sys-color-surface-container-high);
+  }
+  .track-header .info {
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: 12px; line-height: 16px;
+  }
+
+  /* トラックアクションボタン (Tonal / Outlined style) */
   .track-actions { display: flex; gap: 8px; }
   .track-actions button {
-    background: #2a2a2a; border: 1px solid #444; color: #ccc;
-    border-radius: 6px; padding: 4px 10px; font-size: 0.8rem;
-    cursor: pointer; transition: background 0.15s;
+    background: var(--md-sys-color-surface-container-high);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    color: var(--md-sys-color-on-surface);
+    border-radius: 9999px; padding: 6px 16px;
+    font-size: 12px; line-height: 16px; font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.2s cubic-bezier(0.2,0,0,1);
+    position: relative;
   }
-  .track-actions button:hover { background: #3a3a3a; }
-  .track-actions button.danger:hover { background: #5a2020; border-color: #a44; color: #f88; }
+  .track-actions button:hover {
+    background: var(--md-sys-color-surface-container-highest);
+  }
+  .track-actions button:focus-visible {
+    outline: 2px solid var(--md-sys-color-primary);
+    outline-offset: 2px;
+  }
+  .track-actions button.danger {
+    color: var(--md-sys-color-error);
+    border-color: var(--md-sys-color-error-container);
+  }
+  .track-actions button.danger:hover {
+    background: var(--md-sys-color-error-container);
+    color: var(--md-sys-color-on-error-container);
+  }
 
   /* 波形 */
   .waveform-container {
     position: relative; height: 64px; margin-bottom: 8px;
     cursor: pointer; user-select: none;
+    border-radius: 8px;
+    background: var(--md-sys-color-surface-container-lowest);
   }
-  .waveform-container canvas { width: 100%; height: 100%; display: block; border-radius: 6px; }
+  .waveform-container canvas {
+    width: 100%; height: 100%; display: block;
+    border-radius: 8px;
+  }
   /* クロップハンドル */
   .crop-overlay {
     position: absolute; top: 0; height: 100%; display: none;
   }
   .crop-overlay.active { display: block; }
   .crop-shade {
-    position: absolute; top: 0; height: 100%; background: rgba(0,0,0,0.6);
+    position: absolute; top: 0; height: 100%;
+    background: rgba(15,13,19,0.65);
   }
   .crop-handle {
     position: absolute; top: 0; width: 4px; height: 100%;
-    background: #ff6c6c; cursor: ew-resize; z-index: 2;
+    background: var(--md-sys-color-tertiary); cursor: ew-resize; z-index: 2;
   }
   .crop-handle::after {
     content: ''; position: absolute; top: 50%; transform: translateY(-50%);
-    width: 12px; height: 24px; background: #ff6c6c; border-radius: 4px;
-    left: -4px;
+    width: 12px; height: 24px;
+    background: var(--md-sys-color-tertiary);
+    border-radius: 9999px; left: -4px;
   }
 
   /* 再生バー */
   .playback-bar {
     position: absolute; top: 0; width: 2px; height: 100%;
-    background: #fff; pointer-events: none; z-index: 1; display: none;
+    background: var(--md-sys-color-on-surface);
+    pointer-events: none; z-index: 1; display: none;
   }
 
-  /* ボタン */
+  /* Filled Button (Primary) */
   .btn {
-    display: inline-block; padding: 10px 24px;
-    border: none; border-radius: 8px; font-size: 0.95rem;
-    cursor: pointer; text-decoration: none; transition: background 0.2s;
+    display: inline-flex; align-items: center; justify-content: center;
+    height: 40px; padding: 0 24px; gap: 8px;
+    border: none; border-radius: 9999px;
+    font-family: inherit; font-size: 14px; font-weight: 500;
+    line-height: 20px; letter-spacing: 0.1px;
+    cursor: pointer; text-decoration: none;
+    transition: box-shadow 0.2s cubic-bezier(0.2,0,0,1), background 0.2s;
+    position: relative; overflow: hidden;
   }
-  .btn-primary { background: #6c8cff; color: #fff; }
-  .btn-primary:hover { background: #5a7ae6; }
-  .btn-primary:disabled { background: #444; cursor: not-allowed; }
-  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #fff4; border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 6px; }
+  .btn::before {
+    content: ""; position: absolute; inset: 0;
+    border-radius: inherit; opacity: 0; transition: opacity 0.2s;
+  }
+  .btn:hover::before { opacity: 0.08; }
+  .btn:active::before { opacity: 0.12; }
+  .btn:focus-visible {
+    outline: 2px solid var(--md-sys-color-primary);
+    outline-offset: 2px;
+  }
+  .btn-primary {
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+  }
+  .btn-primary::before { background: var(--md-sys-color-on-primary); }
+  .btn-primary:hover {
+    box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 1px 3px 1px rgba(0,0,0,.15);
+  }
+  .btn-primary:disabled {
+    background: rgba(230,225,229,0.12);
+    color: rgba(230,225,229,0.38);
+    box-shadow: none; cursor: not-allowed;
+  }
+  .btn-primary:disabled::before { display: none; }
+  .spinner {
+    display: inline-block; width: 14px; height: 14px;
+    border: 2px solid rgba(56,30,114,0.4);
+    border-top-color: var(--md-sys-color-on-primary);
+    border-radius: 50%; animation: spin 0.6s linear infinite;
+    vertical-align: middle; margin-right: 6px;
+  }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .btn-secondary { background: #2a2a2a; color: #ccc; border: 1px solid #444; }
-  .btn-secondary:hover { background: #3a3a3a; }
+  .btn-secondary {
+    background: var(--md-sys-color-surface-container-high);
+    color: var(--md-sys-color-on-surface);
+    border: 1px solid var(--md-sys-color-outline);
+  }
+  .btn-secondary::before { background: var(--md-sys-color-on-surface); }
+  .btn-secondary:hover {
+    background: var(--md-sys-color-surface-container-highest);
+  }
   .bottom-actions { margin-top: 20px; display: flex; gap: 12px; flex-wrap: wrap; }
 
   /* クロップ・カット情報 */
   .crop-info, .cut-info {
-    font-size: 0.8rem; color: #aaa; margin-top: 4px; display: none;
+    font-size: 12px; line-height: 16px;
+    color: var(--md-sys-color-on-surface-variant);
+    margin-top: 4px; display: none;
   }
   .crop-info.active, .cut-info.active { display: flex; gap: 12px; align-items: center; }
   .crop-info button, .cut-info button {
-    background: #6c8cff; border: none; color: #fff;
-    border-radius: 4px; padding: 3px 10px; font-size: 0.78rem;
-    cursor: pointer;
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    border: none; border-radius: 9999px;
+    padding: 4px 12px; font-size: 12px; font-weight: 500;
+    cursor: pointer; font-family: inherit;
+    transition: box-shadow 0.2s;
   }
-  .crop-info button.cancel, .cut-info button.cancel { background: #444; }
+  .crop-info button:hover, .cut-info button:hover {
+    box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 1px 3px 1px rgba(0,0,0,.15);
+  }
+  .crop-info button.cancel, .cut-info button.cancel {
+    background: var(--md-sys-color-surface-container-highest);
+    color: var(--md-sys-color-on-surface);
+  }
 
   /* カットライン */
   .cut-line {
     position: absolute; top: 0; width: 3px; height: 100%;
-    background: #ff9f43; cursor: ew-resize; z-index: 3; display: none;
+    background: var(--md-sys-color-tertiary);
+    cursor: ew-resize; z-index: 3; display: none;
   }
 </style>
 </head>
@@ -501,7 +661,7 @@ function drawWaveform(t) {
 
   for (let i = 0; i < bars.length; i++) {
     const val = bars[i] * half * 0.9;
-    ctx.fillStyle = '#6c8cff';
+    ctx.fillStyle = '#D0BCFF';
     ctx.fillRect(i * barW, half - val, Math.max(barW - 1, 1), val * 2);
   }
 }
