@@ -500,9 +500,10 @@ HTML_PAGE = """\
 <meta charset="utf-8">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Audio Splitter</title>
+<title>音声分割 - BARIBARIBIKE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
 <style>
   /* MD3 Design Tokens (Light Theme - Blue) */
   :root {
@@ -538,19 +539,106 @@ HTML_PAGE = """\
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
-    font-family: "Roboto", "Noto Sans JP", sans-serif;
+    font-family: "Noto Sans JP", "Roboto", sans-serif;
     background: var(--md-sys-color-surface);
     color: var(--md-sys-color-on-surface);
     min-height: 100vh;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  /* 共通ヘッダー */
+  .app-header {
+    background: #1565C0;
+    color: #fff;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .app-header-inner {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 16px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .app-header-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    color: #fff;
+    font-weight: 700;
+    font-size: 18px;
+    letter-spacing: 0.5px;
+  }
+  .app-header-logo:hover { opacity: 0.8; }
+  .app-header-logo svg { width: 20px; height: 20px; }
+  .app-header-nav {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+  .app-header-nav a {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: rgba(255,255,255,0.7);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    padding-bottom: 2px;
+    transition: color 0.2s;
+  }
+  .app-header-nav a:hover { color: rgba(255,255,255,0.9); }
+  .app-header-nav a.active {
+    color: #fff;
+    border-bottom: 2px solid #fff;
+  }
+  .app-header-nav a svg { width: 16px; height: 16px; }
+  .app-header-hamburger {
+    display: none;
+    background: none;
+    border: none;
+    color: #fff;
+    padding: 8px;
+    cursor: pointer;
+    border-radius: 8px;
+  }
+  .app-header-hamburger:hover { background: rgba(255,255,255,0.1); }
+  .app-header-mobile-nav {
+    display: none;
+    background: #0D47A1;
+    border-top: 1px solid rgba(255,255,255,0.1);
+  }
+  .app-header-mobile-nav a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    color: rgba(255,255,255,0.7);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background 0.2s;
+  }
+  .app-header-mobile-nav a:hover { background: rgba(255,255,255,0.1); }
+  .app-header-mobile-nav a.active { background: rgba(255,255,255,0.1); color: #fff; }
+  .app-header-mobile-nav a svg { width: 16px; height: 16px; }
+  @media (max-width: 768px) {
+    .app-header-nav { display: none; }
+    .app-header-hamburger { display: block; }
+    .app-header-mobile-nav.open { display: block; }
+  }
+  .app-content {
     display: flex;
     justify-content: center;
     padding: 40px 20px;
+    flex: 1;
   }
   .container { max-width: 800px; width: 100%; }
-  h1 {
-    font-size: 24px; line-height: 32px; font-weight: 400;
-    margin-bottom: 24px; color: var(--md-sys-color-on-surface);
-  }
 
   /* ドロップゾーン */
   .dropzone {
@@ -847,8 +935,49 @@ HTML_PAGE = """\
 </style>
 </head>
 <body>
+<!-- 共通ヘッダー -->
+<header class="app-header">
+  <div class="app-header-inner">
+    <a href="https://baribaribike.web.app" class="app-header-logo">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m20 7 1.5-1.5"/><path d="m15 2 1.5 1.5"/><path d="m16.5 3.5 2.5 2.5"/><path d="M10 22v-7.5"/><path d="M10 7V2"/><path d="M10 14.5c0 .828-.448 1.5-1 1.5s-1-.672-1-1.5S8.448 13 9 13s1 .672 1 1.5Z"/><path d="M4 22v-7.5"/><path d="M4 9V4"/><path d="M4 14.5c0 .828-.448 1.5-1 1.5s-1-.672-1-1.5S2.448 13 3 13s1 .672 1 1.5Z"/></svg>
+      BARIBARIBIKE
+    </a>
+    <nav class="app-header-nav">
+      <a href="https://baribari-scheduler-2026.web.app">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>
+        日程調整
+      </a>
+      <a href="https://baribari-setlist-2026.web.app">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        セットリスト
+      </a>
+      <a href="#" class="active">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/></svg>
+        音声分割
+      </a>
+    </nav>
+    <button class="app-header-hamburger" onclick="document.getElementById('mobileNav').classList.toggle('open')">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+    </button>
+  </div>
+  <nav class="app-header-mobile-nav" id="mobileNav">
+    <a href="https://baribari-scheduler-2026.web.app">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>
+      日程調整
+    </a>
+    <a href="https://baribari-setlist-2026.web.app">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+      セットリスト
+    </a>
+    <a href="#" class="active">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/></svg>
+      音声分割
+    </a>
+  </nav>
+</header>
+
+<div class="app-content">
 <div class="container">
-  <h1>Audio Splitter</h1>
 
   <div class="dropzone" id="dropzone">
     <p>音声ファイルをドラッグ&ドロップ</p>
@@ -870,6 +999,7 @@ HTML_PAGE = """\
       <button class="btn btn-secondary" id="driveBtn" onclick="openDriveModal()">Google Driveにアップロード</button>
     </div>
   </div>
+</div>
 </div>
 
 <!-- Google Drive Upload Modal -->
